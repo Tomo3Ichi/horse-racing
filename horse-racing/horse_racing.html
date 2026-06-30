@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏇 Horse Racing Game</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f4f0;
+      color: #1a1a18;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      border: 0.5px solid rgba(0,0,0,0.12);
+      padding: 1.5rem;
+      width: 100%;
+      /* max-width: 520px; */
+    }
+
+    .chip-display { font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+    .sub { font-size: 12px; color: #888; margin-bottom: 12px; }
+    hr { border: none; border-top: 0.5px solid rgba(0,0,0,0.1); margin: 12px 0; }
+
+    /* Horse selection cards */
+    .horse-cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .horse-card {
+      border: 0.5px solid rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 10px 8px;
+      cursor: pointer;
+      text-align: center;
+      background: #fff;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .horse-card:hover { background: #f5f4f0; }
+    .horse-card.selected { border-width: 2px; }
+    .horse-card .h-name { font-size: 18px; font-weight: 500; }
+    .horse-card .h-odds { font-size: 13px; font-weight: 500; margin-top: 3px; }
+    .horse-card .h-label { font-size: 11px; margin-top: 4px; }
+
+    /* Bet input */
+    .input-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+    .input-row label { font-size: 13px; color: #666; min-width: 72px; }
+    input[type=number] {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 0.5px solid rgba(0,0,0,0.2);
+      background: #f5f4f0;
+      color: #1a1a18;
+      font-size: 14px;
+      width: 90px;
+    }
+
+    .btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: 0.5px solid rgba(0,0,0,0.2);
+      background: #fff;
+      color: #1a1a18;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.1s;
+    }
+    .btn:hover { background: #f0efeb; }
+    .btn.primary { background: #e6f1fb; color: #185fa5; border-color: rgba(24,95,165,0.3); }
+    .btn.primary:hover { background: #cce2f7; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+    /* Track */
+    .horse-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+    .horse-lbl { width: 58px; font-size: 12px; color: #666; flex-shrink: 0; }
+    .track-bg {
+      position: relative;
+      flex: 1;
+      height: 24px;
+      background: #f0efeb;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 0.5px solid rgba(0,0,0,0.1);
+    }
+    .horse-bar {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.07s linear;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 4px;
+      font-size: 14px;
+    }
+    .finish-line {
+      position: absolute;
+      right: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: repeating-linear-gradient(to bottom,#fff 0,#fff 4px,#222 4px,#222 8px);
+      opacity: 0.2;
+    }
+
+    .result-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 14px;
+    }
+    .win  { background: #eaf3de; color: #3b6d11; }
+    .lose { background: #fcebeb; color: #a32d2d; }
+
+    #race-status { font-size: 13px; color: #666; margin-bottom: 8px; }
+    #winner-text { font-size: 14px; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1 style="font-size:18px; font-weight:500; margin-bottom:8px;">🏇 Horse Racing</h1>
+
+  <div style="display:flex; align-items:baseline; gap:16px; margin-bottom:4px;">
+    <div class="chip-display">🪙 <span id="chip">500</span> chips</div>
+    <div id="badge-wrap"></div>
+  </div>
+  <div class="sub">馬を選んでベット！</div>
+
+  <hr>
+
+  <!-- Bet UI -->
+  <div id="bet-section">
+    <div style="font-size:13px; color:#666; margin-bottom:6px;">馬を選ぶ</div>
+    <div class="horse-cards" id="horse-cards"></div>
+
+    <div class="input-row" style="margin-top:12px;">
+      <label>ベット額</label>
+      <input type="number" id="stake-input" value="50" min="1">
+      <button class="btn" onclick="setMax()">MAX</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="startRace()">レース開始 🏇</button>
+    </div>
+  </div>
+
+  <!-- Race track -->
+  <div id="race-section" style="display:none;">
+    <div id="race-status">🏇 レース中...</div>
+    <div id="track"></div>
+  </div>
+
+  <!-- After race -->
+  <div id="after-section" style="display:none;">
+    <hr>
+    <div id="winner-text"></div>
+    <div class="btn-row">
+      <button class="btn primary" onclick="nextRound()">次のレース →</button>
+      <button class="btn" onclick="trueReset()">リセット</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const GOAL = 30;
+  const SPEED = 60;
+  const HORSES = {
+    a: { odds: 1.2, color: '#185FA5', bg: '#E6F1FB', emoji: '🔵', label: '本命' },
+    b: { odds: 1.4, color: '#0F6E56', bg: '#E1F5EE', emoji: '🟢', label: '' },
+    c: { odds: 1.6, color: '#993C1D', bg: '#FAECE7', emoji: '🟠', label: '' },
+    d: { odds: 2.0, color: '#993556', bg: '#FBEAF0', emoji: '🟣', label: '大穴' },
+  };
+
+  let chip = 500, pos = {}, betHorse = 'a', stakes = 0, winner = null, raceInterval = null;
+
+  function initPos() { pos = { a: 7, b: 5, c: 3, d: 1 }; }
+  initPos();
+
+  function renderCards() {
+    document.getElementById('horse-cards').innerHTML = Object.keys(HORSES).map(h => {
+      const { odds, color, bg, emoji, label } = HORSES[h];
+      const sel = h === betHorse;
+      return `<div class="horse-card${sel ? ' selected' : ''}" onclick="selectHorse('${h}')"
+        style="${sel ? `border-color:${color}; background:${bg};` : ''}">
+        <div class="h-name" style="${sel ? `color:${color}` : ''}">${emoji} ${h.toUpperCase()}</div>
+        <div class="h-odds" style="color:${color};">×${odds}</div>
+        <div class="h-label" style="color:${color}; min-height:16px;">${label}</div>
+      </div>`;
+    }).join('');
+  }
+  renderCards();
+
+  function selectHorse(h) { betHorse = h; renderCards(); }
+  function setMax() { document.getElementById('stake-input').value = chip; }
+
+  function renderTrack() {
+    document.getElementById('track').innerHTML = Object.keys(HORSES).map(h => {
+      const pct = Math.min(100, (pos[h] / GOAL) * 100);
+      const { color, bg, emoji, odds } = HORSES[h];
+      const isBet = h === betHorse;
+      return `<div class="horse-row">
+        <div class="horse-lbl" style="${isBet ? `color:${color}; font-weight:500` : ''}">${h.toUpperCase()} ×${odds}</div>
+        <div class="track-bg">
+          <div class="horse-bar" style="width:${pct}%; background:${bg}; border:1.5px solid ${color};">${emoji}</div>
+          <div class="finish-line"></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function startRace() {
+    if (chip <= 0) { trueReset(); return; }
+    stakes = Math.min(parseInt(document.getElementById('stake-input').value) || 0, chip);
+    if (stakes <= 0) { alert('ベット額を入力してください'); return; }
+    chip -= stakes;
+    document.getElementById('chip').textContent = chip;
+    document.getElementById('badge-wrap').innerHTML = '';
+    winner = null; initPos();
+
+    document.getElementById('bet-section').style.display = 'none';
+    document.getElementById('race-section').style.display = 'block';
+    document.getElementById('after-section').style.display = 'none';
+    document.getElementById('race-status').textContent = '🏇 レース中...';
+    renderTrack();
+    raceInterval = setInterval(tick, SPEED);
+  }
+
+  function tick() {
+    const keys = Object.keys(HORSES);
+    const h = keys[Math.floor(Math.random() * keys.length)];
+    pos[h]++;
+    renderTrack();
+    if (pos[h] >= GOAL) { clearInterval(raceInterval); winner = h; finishRace(); }
+  }
+
+  function finishRace() {
+    const won = winner === betHorse;
+    const payout = won ? Math.floor(stakes * HORSES[winner].odds) : 0;
+    chip += payout;
+    document.getElementById('chip').textContent = chip;
+    document.getElementById('race-status').textContent = '🏁 ゴール！';
+    document.getElementById('badge-wrap').innerHTML = won
+      ? `<span class="result-badge win">WIN +${payout} 🎉</span>`
+      : `<span class="result-badge lose">LOSE −${stakes}</span>`;
+    document.getElementById('winner-text').innerHTML =
+      `優勝: <strong>${winner.toUpperCase()}</strong>（あなたの馬: ${betHorse.toUpperCase()}）`;
+    document.getElementById('after-section').style.display = 'block';
+    if (chip <= 0) {
+      document.getElementById('winner-text').innerHTML +=
+        '<br><span style="color:#a32d2d; font-size:13px;">チップがなくなりました。リセットしてください。</span>';
+    }
+  }
+
+  function nextRound() {
+    if (chip <= 0) { trueReset(); return; }
+    document.getElementById('bet-section').style.display = 'block';
+    document.getElementById('race-section').style.display = 'none';
+    document.getElementById('after-section').style.display = 'none';
+    document.getElementById('badge-wrap').innerHTML = '';
+    renderCards();
+  }
+
+  function trueReset() {
+    chip = 500; betHorse = 'a'; initPos();
+    document.getElementById('chip').textContent = chip;
+    document.getElementById('badge-wrap').innerHTML = '';
+    document.getElementById('bet-section').style.display = 'block';
+    document.getElementById('race-section').style.display = 'none';
+    document.getElementById('after-section').style.display = 'none';
+    renderCards();
+  }
+</script>
+</body>
+</html>
